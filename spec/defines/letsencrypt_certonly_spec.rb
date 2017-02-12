@@ -84,6 +84,12 @@ describe 'letsencrypt::certonly' do
         it { is_expected.to contain_cron('letsencrypt renew cron foo.example.com').with_command '(echo before) && letsencrypt --text --agree-tos certonly -a apache --keep-until-expiring -d foo.example.com && (echo success)' }
       end
 
+      context 'without plugin' do
+        let(:title) { 'foo.example.com' }
+        let(:params) { { custom_plugin: true } }
+        it { is_expected.to contain_exec('letsencrypt certonly foo.example.com').with_command 'letsencrypt --text --agree-tos certonly -d foo.example.com' }
+      end
+
       context 'with invalid plugin' do
         let(:title) { 'foo.example.com' }
         let(:params) { { plugin: 'bad' } }

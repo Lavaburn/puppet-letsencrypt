@@ -7,6 +7,8 @@
 #
 # [*domains*]
 #   Namevar. An array of domains to include in the CSR.
+# [*custom_plugin*]
+#   Whether to use a custom plugin in additional_args and disable -a flag.
 # [*plugin*]
 #   The authenticator plugin to use when requesting the certificate.
 # [*webroot_paths*]
@@ -32,6 +34,7 @@
 #
 define letsencrypt::certonly (
   $domains              = [$title],
+  $custom_plugin        = false,
   $plugin               = 'standalone',
   $webroot_paths        = undef,
   $letsencrypt_command  = $letsencrypt::command,
@@ -42,7 +45,7 @@ define letsencrypt::certonly (
   $cron_success_command = undef,
 ) {
   validate_array($domains)
-  validate_re($plugin, ['^apache$', '^standalone$', '^webroot$'])
+  validate_re($plugin, ['^apache$', '^standalone$', '^webroot$', '^nginx$'])
   if $webroot_paths {
     validate_array($webroot_paths)
   } elsif $plugin == 'webroot' {
@@ -54,8 +57,14 @@ define letsencrypt::certonly (
   }
   validate_array($environment)
   validate_bool($manage_cron)
+  validate_bool($custom_plugin)
 
-  $command_start = "${letsencrypt_command} --text --agree-tos certonly -a ${plugin} "
+  if ($custom_plugin) {
+    $command_start = "${letsencrypt_command} --text --agree-tos certonly "
+  } else {
+    $command_start = "${letsencrypt_command} --text --agree-tos certonly -a ${plugin} "
+  }
+
   $command_domains = $plugin ? {
     'webroot' => inline_template('<%= @domains.zip(@webroot_paths).map { |domain| "#{"--webroot-path #{domain[1]} " if domain[1]}-d #{domain[0]}"}.join(" ") %>'),
     default   => inline_template('-d <%= @domains.join(" -d ")%>'),
